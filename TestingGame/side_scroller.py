@@ -45,6 +45,8 @@ item_boxes = {
 BG = (144, 201, 120)
 RED = (255, 0, 0)
 WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+BLACK = (0, 0, 0)
 
 # define font
 font = pygame.font.SysFont('Futura', 30)
@@ -68,8 +70,10 @@ class Mob(pygame.sprite.Sprite):
         # action fields
         self.ammo = ammo
         self.start_ammo = ammo
+        self.max_ammo = 40
         self.shoot_cooldown = 0
         self.grenades = grenades
+        self.max_grenades = 10
         # movement fields
         self.direction = 1
         self.vel_y = 0
@@ -224,11 +228,29 @@ class ItemBox(pygame.sprite.Sprite):
                     player.health = player.max_health
             elif self.item_type == 'Ammo':
                 player.ammo += 10
+                if player.ammo > player.max_ammo:
+                    player.ammo = player.max_ammo
             elif self.item_type == 'Grenade':
                 player.grenades += 5
+                if player.grenades > player.max_grenades:
+                    player.grenades = player.max_grenades
             # delete item
             self.kill()
 
+class HealthBar():
+    def __init__(self, x, y, health, max_health):
+        self.x = x
+        self.y = y
+        self.health = health
+        self.max_health = max_health
+
+    def draw(self, health):
+        # update with new health
+        self.health = health
+        ratio = self.health / self.max_health
+        pygame.draw.rect(screen, BLACK, (self.x - 1, self.y - 1, 152, 22))
+        pygame.draw.rect(screen, RED, (self.x, self.y, 150, 20))
+        pygame.draw.rect(screen, GREEN, (self.x, self.y, 150 * ratio, 20))
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         pygame.sprite.Sprite.__init__(self)
@@ -347,6 +369,8 @@ item_box_group.add(item_box)
 
 # generate mobs
 player = Mob('duck', 200, 400, 7, 20, 5, 2)
+health_bar = HealthBar(10, 10, player.health, player.health)
+
 enemy = Mob('plant', 400, 400, 5, 100, 0, 2)
 enemy2 = Mob('jere', 600, 400, 5, 100, 0, 2)
 enemy_group.add(enemy)
@@ -359,14 +383,19 @@ while run:
     
     clock.tick(FPS)
     draw_bg()
+    # show health
+    health_bar.draw(player.health)
     # show ammo
     draw_text('PEAS: ', font, WHITE, 15, 620)
     for x in range(player.ammo):
-        screen.blit (bullet_img, (95 + (x * 10), 620))
+        if x < 20:
+            screen.blit (bullet_img, (95 + (x * 10), 615))
+        else:
+            screen.blit (bullet_img, (95 + ((x-20) * 10), 625))   
     # show grenades
-    draw_text('EGGS: ', font, WHITE, 15, 600)
-    # show health
-    draw_text('HEALTH: ', font, WHITE, 700, 620)
+    draw_text('EGGS: ', font, WHITE, 15, 590)
+    for x in range(player.grenades):
+        screen.blit (grenade_img, (95 + (x * 20), 590))
 
     for enemy in enemy_group:
         enemy.update()
