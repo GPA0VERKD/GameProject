@@ -60,19 +60,24 @@ def draw_bg():
 class Mob(pygame.sprite.Sprite):
     def __init__(self, char_type, x, y, speed, ammo, grenades, scale=1):
         pygame.sprite.Sprite.__init__(self)
+        # mob stat fields
         self.alive = True
         self.speed = speed
+        self.health = 100
+        self.max_health = self.health
+        # action fields
         self.ammo = ammo
         self.start_ammo = ammo
         self.shoot_cooldown = 0
         self.grenades = grenades
-        self.health = 100
-        self.max_health = self.health
+        # movement fields
         self.direction = 1
         self.vel_y = 0
         self.jump = False
         self.in_air = True
         self.flip = False
+        self.pound_cd = False
+        # animation fields
         self.char_type = char_type
         self.animation_list = []
         self.index = 0
@@ -124,13 +129,17 @@ class Mob(pygame.sprite.Sprite):
 
         # jump
         if self.jump == True and self.in_air == False:
-            self.vel_y = -11 # jump height
+            self.vel_y = -13 # jump height
             self.jump = False
             self.in_air = True
 
-        # apply gravity
+        # apply gravity + pound
         self.vel_y += GRAVITY
-        if self.vel_y > 10:
+        if self.pound_cd:
+            self.vel_y = 20
+            if not self.in_air:
+                self.pound_cd = False
+        elif self.vel_y > 10:
             self.vel_y = 10
         dy += self.vel_y
 
@@ -150,6 +159,10 @@ class Mob(pygame.sprite.Sprite):
             bullet_group.add(bullet)
 
             self.ammo -= 1
+
+    def pound(self):
+        if self.in_air and not self.pound_cd:
+            self.pound_cd = True
 
     def update_animation(self):
         # update animation
@@ -333,7 +346,7 @@ item_box = ItemBox('Grenade', 500, 550)
 item_box_group.add(item_box)
 
 # generate mobs
-player = Mob('duck', 200, 400, 5, 20, 5, 2)
+player = Mob('duck', 200, 400, 7, 20, 5, 2)
 enemy = Mob('plant', 400, 400, 5, 100, 0, 2)
 enemy2 = Mob('jere', 600, 400, 5, 100, 0, 2)
 enemy_group.add(enemy)
@@ -347,9 +360,13 @@ while run:
     clock.tick(FPS)
     draw_bg()
     # show ammo
-    draw_text(f'PEAS: {player.ammo}', font, WHITE, 700, 620)
-    draw_text(f'EGGS: {player.grenades}', font, WHITE, 600, 620)
-    draw_text(f'HEALTH: {player.health}', font, WHITE, 15, 620)
+    draw_text('PEAS: ', font, WHITE, 15, 620)
+    for x in range(player.ammo):
+        screen.blit (bullet_img, (95 + (x * 10), 620))
+    # show grenades
+    draw_text('EGGS: ', font, WHITE, 15, 600)
+    # show health
+    draw_text('HEALTH: ', font, WHITE, 700, 620)
 
     for enemy in enemy_group:
         enemy.update()
@@ -408,6 +425,8 @@ while run:
                 moving_left = True
             if event.key == pygame.K_d:
                 moving_right = True
+            if event.key == pygame.K_s:
+                player.pound()
             if event.key == pygame.K_SPACE:
                 shoot = True
             if event.key == pygame.K_q:
