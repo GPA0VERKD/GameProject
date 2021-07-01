@@ -1,5 +1,6 @@
 import pygame
 import os
+import random
 
 pygame.init()
 
@@ -81,6 +82,11 @@ class Mob(pygame.sprite.Sprite):
         self.in_air = True
         self.flip = False
         self.pound_cd = False
+        # ai fields
+        self.move_counter = 0
+        self.idling = False
+        self.idling_counter = 0
+        self.vision = pygame.Rect(0, 0, 150, 20)
         # animation fields
         self.char_type = char_type
         self.animation_list = []
@@ -159,10 +165,46 @@ class Mob(pygame.sprite.Sprite):
     def shoot(self):
         if self.shoot_cooldown == 0 and self.ammo > 0:
             self.shoot_cooldown = 20
-            bullet = Bullet(self.rect.centerx + (-0.8 * self.rect.size[0] * self.direction), self.rect.centery, self.direction)
+            bullet = Bullet(self.rect.centerx + (-0.9 * self.rect.size[0] * self.direction), self.rect.centery, self.direction)
             bullet_group.add(bullet)
 
             self.ammo -= 1
+
+    # move back and forth and shoot
+    def ai1(self):
+        if self.alive and player.alive:
+            if self.idling == False and random.randint(1, 100) == 1:
+                self.update_action(0)
+                self.idling = True
+                self.idling_counter = 50
+            # check if ai is near player
+            if self.vision.colliderect(player.rect):
+                # stop running, face player
+                self.update_action(0)
+                # shoot
+                self.shoot()
+            else:
+                if not self.idling:
+                    if self.direction == -1:
+                        ai_moving_right = True
+                    else:
+                        ai_moving_right = False
+                    ai_moving_left = not ai_moving_right
+                    self.move(ai_moving_left, ai_moving_right)
+                    self.update_action(0)
+                    self.move_counter += 1
+                    # update ai vision as the enemy moves
+                    self.vision.center = (self.rect.centerx  + -75 * self.direction, self.rect.centery)
+                    # pygame.draw.rect(screen, RED, self.vision)
+                    
+                    if self.move_counter > TILE_SIZE:
+                        self.direction *= -1
+                        self.move_counter *= -1
+                else:
+                    self.idling_counter -= 1
+                    if self.idling_counter <= 0:
+                        self.idling = False
+
 
     def pound(self):
         if self.in_air and not self.pound_cd:
@@ -254,7 +296,7 @@ class HealthBar():
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         pygame.sprite.Sprite.__init__(self)
-        self.speed = 10
+        self.speed = 12
         self.image = bullet_img
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
@@ -368,11 +410,11 @@ item_box = ItemBox('Grenade', 500, 550)
 item_box_group.add(item_box)
 
 # generate mobs
-player = Mob('duck', 200, 400, 7, 20, 5, 2)
+player = Mob('duck', 200, 400, 7, 20, 5, 1.5)
 health_bar = HealthBar(10, 10, player.health, player.health)
 
-enemy = Mob('plant', 400, 400, 5, 100, 0, 2)
-enemy2 = Mob('jere', 600, 400, 5, 100, 0, 2)
+enemy = Mob('plant', 400, 400, 3, 100, 0, 1.5)
+enemy2 = Mob('plant', 600, 400, 3, 100, 0)
 enemy_group.add(enemy)
 enemy_group.add(enemy2)
 
@@ -398,6 +440,7 @@ while run:
         screen.blit (grenade_img, (95 + (x * 20), 590))
 
     for enemy in enemy_group:
+        enemy.ai1()
         enemy.update()
         enemy.draw()
 
@@ -441,8 +484,6 @@ while run:
 
     player.move(moving_left, moving_right)
     
-    for enemy in enemy_group:
-        enemy.move()
 
     for event in pygame.event.get():
         # quit game with 'X' button
