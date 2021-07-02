@@ -414,7 +414,7 @@ player = Mob('duck', 200, 400, 7, 20, 5, 1.5)
 health_bar = HealthBar(10, 10, player.health, player.health)
 
 enemy = Mob('plant', 400, 400, 3, 100, 0, 1.5)
-enemy2 = Mob('plant', 600, 400, 3, 100, 0)
+enemy2 = Mob('jere', 600, 400, 3, 100, 0)
 enemy_group.add(enemy)
 enemy_group.add(enemy2)
 
